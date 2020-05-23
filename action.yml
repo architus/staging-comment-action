@@ -1,12 +1,10 @@
-name: 'Architus Upload API Client'
-description: 'Uploads build archives to the Architus staging upload API'
+name: 'Architus staging comment action'
+description: 'Adds comments to archit.us pull requests with build information/staging links'
 inputs:
-  archive-path:
-    description: 'Path of the build archive'
-    required: true
-  token:
-    description: 'Upload API token'
-    required: true
+  mode:
+    description: 'Operation mode (either "pre" or "post"); used to display different messages during/after build'
+    default: 'post'
+    required: false
 runs:
   using: 'node12'
   main: 'dist/index.js'
