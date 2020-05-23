@@ -43,6 +43,32 @@ module.exports =
 /************************************************************************/
 /******/ ({
 
+/***/ 9:
+/***/ (function(__unusedmodule, exports) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+function post() {
+    return __awaiter(this, void 0, void 0, function* () {
+        // eslint-disable-next-line no-console
+        console.log("post");
+    });
+}
+exports.default = post;
+
+
+/***/ }),
+
 /***/ 87:
 /***/ (function(module) {
 
@@ -88,8 +114,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(__webpack_require__(470));
-const start_1 = __importDefault(__webpack_require__(476));
-const success_1 = __importDefault(__webpack_require__(619));
+const pre_1 = __importDefault(__webpack_require__(796));
+const post_1 = __importDefault(__webpack_require__(9));
 /**
  * Executes the primary logic of the action
  */
@@ -98,11 +124,11 @@ function run() {
         try {
             const mode = core.getInput("mode");
             switch (mode) {
-                case "start":
-                    yield start_1.default();
+                case "pre":
+                    yield pre_1.default();
                     break;
-                case "success":
-                    yield success_1.default();
+                case "post":
+                    yield post_1.default();
                     break;
                 default:
             }
@@ -445,62 +471,36 @@ exports.getState = getState;
 
 /***/ }),
 
-/***/ 476:
-/***/ (function(__unusedmodule, exports) {
-
-"use strict";
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-function start() {
-    return __awaiter(this, void 0, void 0, function* () {
-        // eslint-disable-next-line no-console
-        console.log("start");
-    });
-}
-exports.default = start;
-
-
-/***/ }),
-
-/***/ 619:
-/***/ (function(__unusedmodule, exports) {
-
-"use strict";
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-function success() {
-    return __awaiter(this, void 0, void 0, function* () {
-        // eslint-disable-next-line no-console
-        console.log("success");
-    });
-}
-exports.default = success;
-
-
-/***/ }),
-
 /***/ 622:
 /***/ (function(module) {
 
 module.exports = require("path");
+
+/***/ }),
+
+/***/ 796:
+/***/ (function(__unusedmodule, exports) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+function pre() {
+    return __awaiter(this, void 0, void 0, function* () {
+        // eslint-disable-next-line no-console
+        console.log("pre");
+    });
+}
+exports.default = pre;
+
 
 /***/ })
 

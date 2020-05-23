@@ -1,6 +1,6 @@
 import * as core from "@actions/core";
-import start from "./states/start";
-import success from "./states/success";
+import pre from "./states/pre";
+import post from "./states/post";
 
 /**
  * Executes the primary logic of the action
@@ -9,11 +9,11 @@ async function run(): Promise<void> {
   try {
     const mode: string = core.getInput("mode");
     switch (mode) {
-      case "start":
-        await start();
+      case "pre":
+        await pre();
         break;
-      case "success":
-        await success();
+      case "post":
+        await post();
         break;
       default:
     }
