@@ -8,7 +8,9 @@ import failure from "./states/failure";
 async function cleanup(): Promise<void> {
   try {
     const isSuccess = core.getState("stagingSuccess") === "true";
-    if (!isSuccess) {
+    const shouldRun = core.getState("handledCleanup") !== "true";
+    if (!isSuccess && shouldRun) {
+      core.saveState("handledCleanup", "true");
       await failure();
     }
   } catch (error) {
