@@ -1,0 +1,40 @@
+{
+  "name": "staging-comment-action",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Adds/updates a comment on each PR including the URL of the staging site",
+  "main": "lib/main.js",
+  "scripts": {
+    "build": "tsc",
+    "format": "prettier --write **/*.ts",
+    "format-check": "prettier --check **/*.ts",
+    "lint": "eslint **/*.ts",
+    "pack": "ncc build",
+    "all": "npm run build && npm run format && npm run lint && npm run pack"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/architus/staging-comment-action.git"
+  },
+  "keywords": [
+    "actions",
+    "node",
+    "staging",
+    "ci"
+  ],
+  "author": "architus",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^12.7.12",
+    "@typescript-eslint/parser": "^2.8.0",
+    "@zeit/ncc": "^0.20.5",
+    "eslint": "^5.16.0",
+    "eslint-plugin-github": "^2.0.0",
+    "js-yaml": "^3.13.1",
+    "prettier": "^1.19.1",
+    "typescript": "^3.6.4"
+  }
+}
