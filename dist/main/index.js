@@ -29935,7 +29935,7 @@ function parseBuildEntry(line) {
     return {
         emoji: cells[0],
         status: cells[1],
-        deployUrl: cells[2] === NULL ? null : cells[2],
+        deployUrl: cells[2] === NULL ? null : parseLink(cells[2])[1],
         commitSha,
         commitLink,
         buildTime: cells[4],
