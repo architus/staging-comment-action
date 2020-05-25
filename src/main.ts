@@ -140,6 +140,14 @@ async function patchComment(
   }
 }
 
+/**
+ * Performs the update logic, modifying the given build state and returning the new one
+ * (might mutate the old state object). If the comment exists and the function can find
+ * a matching entry in the comment, it updates the entry. Otherwise, adds a new entry as
+ * the latest one (pushing all other entries down if they exist).
+ * @param current - Current build entry (might not be latest)
+ * @param actionContext - Base action context
+ */
 function updateState(
   current: BuildEntry,
   actionContext: ActionContext,
