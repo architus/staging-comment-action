@@ -129,6 +129,9 @@ function parseLink(markdown: string): [string, string] {
   throw new Error(`Unable to parse markdown link ${markdown}`);
 }
 
+const LINK_NOTE =
+  "Semi-permanent links to the built versions of each commit are available in the details below, which are kept for 2 weeks after they are created.";
+
 /**
  * Renders the failure comment
  */
@@ -137,6 +140,8 @@ ${COMMENT_TAG}
 There was an error building a deploy preview for the last commit. For more details, check the output of the action run [here](${
   state.latest.runLink
 }).
+
+${LINK_NOTE}
 
 ${details(state)}
 `;
@@ -149,6 +154,8 @@ export const successful = ({ prId, url, state }: CommentArgs): string =>
 ${COMMENT_TAG}
 A deploy preview has been created for this Pull Request (#${prId}), which is available at ${url}.
 
+${LINK_NOTE}
+
 ${details(state)}
 `.trim();
 
@@ -159,6 +166,8 @@ export const building = ({ prId, url, state }: CommentArgs): string =>
   `
 ${COMMENT_TAG}
 A deploy preview is being created for this Pull Request (#${prId}), which will be available at ${url} once completed.
+
+${LINK_NOTE}
 
 ${details(state)}
 `.trim();
@@ -206,8 +215,8 @@ export const entry = ({
  * @param totalSeconds - Total number of seconds in the duration
  */
 export const duration = (totalSeconds: number): string => {
-  const minutes = totalSeconds % 60;
-  const seconds = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  const minutes = Math.floor(totalSeconds / 60);
   return `${minutes}m ${seconds}s`;
 };
 
@@ -255,8 +264,8 @@ export const date = (dateTime: Date): string => {
 const previous = (previousBuilds: BuildEntry[]): string =>
   previousBuilds.length > 0
     ? `
-        ${HEADER_ROW}
-        ${SEPARATOR_ROW}
-        ${previousBuilds.map(entry).join("\n")}
+${HEADER_ROW}
+${SEPARATOR_ROW}
+${previousBuilds.map(entry).join("\n")}
       `.trim()
     : `No previous builds found`;

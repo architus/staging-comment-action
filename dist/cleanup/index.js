@@ -3774,13 +3774,14 @@ function run(mode) {
         const runId = process.env.GITHUB_RUN_ID;
         if (runId == null)
             throw new Error(`Environment variable "GITHUB_RUN_ID" undefined; couldn't link to action run`);
+        const shortSha = github_1.context.sha.slice(0, 7);
         const actionContext = {
-            stagingUrl: `${baseStagingUrl}/pr/${prId}`,
+            stagingUrl: `${baseStagingUrl}/commit/${shortSha}/`,
             buildTime: new Date(Date.parse(buildTime)),
             buildDuration: parsedBuildDuration,
             runLink: buildRunLink(repo, runId),
-            shortSha: github_1.context.sha.slice(0, 7),
             sha: github_1.context.sha,
+            shortSha,
             comment,
             octokit,
             repo,
@@ -22579,12 +22580,15 @@ function parseLink(markdown) {
         return [matchObject[1], matchObject[2]];
     throw new Error(`Unable to parse markdown link ${markdown}`);
 }
+const LINK_NOTE = "Semi-permanent links to the built versions of each commit are available in the details below, which are kept for 2 weeks after they are created.";
 /**
  * Renders the failure comment
  */
 exports.failed = ({ state }) => `
 ${COMMENT_TAG}
 There was an error building a deploy preview for the last commit. For more details, check the output of the action run [here](${state.latest.runLink}).
+
+${LINK_NOTE}
 
 ${exports.details(state)}
 `;
@@ -22595,6 +22599,8 @@ exports.successful = ({ prId, url, state }) => `
 ${COMMENT_TAG}
 A deploy preview has been created for this Pull Request (#${prId}), which is available at ${url}.
 
+${LINK_NOTE}
+
 ${exports.details(state)}
 `.trim();
 /**
@@ -22603,6 +22609,8 @@ ${exports.details(state)}
 exports.building = ({ prId, url, state }) => `
 ${COMMENT_TAG}
 A deploy preview is being created for this Pull Request (#${prId}), which will be available at ${url} once completed.
+
+${LINK_NOTE}
 
 ${exports.details(state)}
 `.trim();
@@ -22633,8 +22641,8 @@ exports.entry = ({ emoji, status, deployUrl, commitSha, commitLink, buildTime, b
  * @param totalSeconds - Total number of seconds in the duration
  */
 exports.duration = (totalSeconds) => {
-    const minutes = totalSeconds % 60;
-    const seconds = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    const minutes = Math.floor(totalSeconds / 60);
     return `${minutes}m ${seconds}s`;
 };
 /**
@@ -22677,9 +22685,9 @@ exports.date = (dateTime) => {
  */
 const previous = (previousBuilds) => previousBuilds.length > 0
     ? `
-        ${HEADER_ROW}
-        ${SEPARATOR_ROW}
-        ${previousBuilds.map(exports.entry).join("\n")}
+${HEADER_ROW}
+${SEPARATOR_ROW}
+${previousBuilds.map(exports.entry).join("\n")}
       `.trim()
     : `No previous builds found`;
 

@@ -89,13 +89,14 @@ export async function run(mode: EventMode): Promise<void> {
       `Environment variable "GITHUB_RUN_ID" undefined; couldn't link to action run`,
     );
 
+  const shortSha = context.sha.slice(0, 7);
   const actionContext: ActionContext = {
-    stagingUrl: `${baseStagingUrl}/pr/${prId}`,
+    stagingUrl: `${baseStagingUrl}/commit/${shortSha}/`,
     buildTime: new Date(Date.parse(buildTime)),
     buildDuration: parsedBuildDuration,
     runLink: buildRunLink(repo, runId),
-    shortSha: context.sha.slice(0, 7),
     sha: context.sha,
+    shortSha,
     comment,
     octokit,
     repo,
