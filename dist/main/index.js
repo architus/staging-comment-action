@@ -3786,6 +3786,7 @@ function run(mode) {
             repo,
             prId,
         };
+        core.debug(`stagingSuccess state: ${core.getState("stagingSuccess")}`);
         switch (mode) {
             case "pre":
                 yield pre(actionContext);
@@ -3797,6 +3798,7 @@ function run(mode) {
             case "failure":
                 yield failure(actionContext);
         }
+        core.debug(`stagingSuccess state: ${core.getState("stagingSuccess")}`);
     });
 }
 exports.run = run;
