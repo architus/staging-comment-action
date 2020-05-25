@@ -3,13 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "description": "Adds/updates a comment on each PR including the URL of the staging site",
-  "main": "lib/main.js",
+  "main": "lib/index.js",
   "scripts": {
     "build": "tsc",
     "format": "prettier --write **/*.ts",
     "format-check": "prettier --check **/*.ts",
     "lint": "eslint **/*.ts",
-    "pack": "ncc build lib/main.js --out dist/main && ncc build lib/cleanup.js --out dist/cleanup",
+    "pack": "ncc build lib/index.js --out dist/main && ncc build lib/cleanup.js --out dist/cleanup",
     "all": "npm run build && npm run format && npm run lint && npm run pack"
   },
   "repository": {
@@ -25,7 +25,9 @@
   "author": "architus",
   "license": "MIT",
   "dependencies": {
-    "@actions/core": "^1.2.0"
+    "@actions/core": "^1.2.0",
+    "@actions/github": "^2.2.0",
+    "@octokit/rest": "^17.9.2"
   },
   "devDependencies": {
     "@types/node": "^12.7.12",

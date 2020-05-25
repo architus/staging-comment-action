@@ -5,6 +5,18 @@ inputs:
     description: 'Operation mode (either "pre" or "post"); used to display different messages during/after build'
     default: 'post'
     required: false
+  base-staging-url:
+    description: 'Base staging URL hosting the `upload-api` server'
+    required: true
+  build-time:
+    description: 'Start of build. Must be passed into both beginning and end'
+    required: true
+  build-duration:
+    description: 'Length (in seconds) of build, passed only into the "post" invocation'
+    required: false
+  GITHUB_TOKEN:
+    description: 'GitHub API token'
+    required: true
 runs:
   using: 'node12'
   main: 'dist/main/index.js'
