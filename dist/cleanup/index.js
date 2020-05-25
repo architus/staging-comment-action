@@ -21747,7 +21747,7 @@ function cleanup() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const isSuccess = core.getState("stagingSuccess") === "true";
-            const shouldRun = core.getInput("mode") !== "post";
+            const shouldRun = core.getInput("mode") === "post";
             if (!isSuccess && shouldRun) {
                 yield main_1.run("failure");
             }
