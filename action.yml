@@ -14,6 +14,9 @@ inputs:
   build-duration:
     description: 'Length (in seconds) of build, passed only into the "post" invocation'
     required: false
+  job-name:
+    description: Name of the job this action is a part of, used for permalinking to runs
+    required: false
   GITHUB_TOKEN:
     description: 'GitHub API token'
     required: true

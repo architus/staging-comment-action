@@ -3757,30 +3757,88 @@ function getActionComment(octokit, prId, repo) {
     });
 }
 /**
+ * Gets the SHA of the latest commit on the branch for the given PR
+ * @param octokit - Current Octokit GitHub API binding instance
+ * @param prId - PR ID for the current CI context
+ * @param repo - GitHub repo for the current CI context
+ */
+function getLatestCommit(octokit, prId, repo) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const { data: pr } = yield octokit.pulls.get(Object.assign(Object.assign({}, repo), { pull_number: prId }));
+        const branch = pr.head.ref;
+        if (pr.head.repo.full_name !== `${repo.owner}/${repo.repo}`) {
+            const message = `Skipping build for untrusted external repository ${pr.head.repo.full_name}`;
+            throw new Error(message);
+        }
+        else {
+            // Use the latest commit from the branch
+            const { data: commits } = yield octokit.repos.listCommits(Object.assign(Object.assign({}, repo), { sha: branch, 
+                // Get the latest commit on the branch
+                per_page: 1 }));
+            if (commits.length === 0)
+                throw new Error(`No commits found in branch ${branch}`);
+            return commits[0];
+        }
+    });
+}
+/**
+ * Attempts to find the currently running job from the API
+ * @param octokit - Current Octokit GitHub API binding instance
+ * @param repo - GitHub repo for the current CI context
+ * @param runId - GitHub actions workflow run Id
+ * @param jobName - GitHub actions job name for the staging job
+ */
+function getJob(octokit, repo, runId, jobName) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (jobName == null) {
+            core.info(`Skipping job matching; linking to overall workflow run`);
+            return null;
+        }
+        const { data } = yield octokit.actions.listJobsForWorkflowRun(Object.assign(Object.assign({}, repo), { run_id: runId }));
+        const foundJobs = data.jobs.filter((job) => job.name === jobName);
+        if (foundJobs.length === 0) {
+            core.warning(`No jobs matching job.name = ${jobName} for workflow run with id ${runId}`);
+            return null;
+        }
+        return foundJobs[0];
+    });
+}
+/**
  * Runs the main action logic depending on the mode
  * @param mode - Event mode for the action (i.e. phase of CI job)
  */
 function run(mode) {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const token = core.getInput("GITHUB_TOKEN");
         const baseStagingUrl = core.getInput("base-staging-url");
         const buildTime = core.getInput("build-time");
         const buildDuration = core.getInput("build-duration");
+        const jobName = core.getInput("job-name");
         const parsedBuildDuration = buildDuration.trim().length > 0 ? parseInt(buildDuration.trim()) : null;
         const octokit = new github_1.GitHub(token);
         const prId = github_1.context.issue.number;
         const { repo } = github_1.context;
         const comment = yield getActionComment(octokit, prId, repo);
+        if (comment != null) {
+            core.debug(`Found existing CI comment ${comment.id} by ${comment.user.login} on PR ${prId}`);
+        }
+        else {
+            core.debug(`Found no existing CI comment on PR ${prId}`);
+        }
         const runId = process.env.GITHUB_RUN_ID;
         if (runId == null)
             throw new Error(`Environment variable "GITHUB_RUN_ID" undefined; couldn't link to action run`);
-        const shortSha = github_1.context.sha.slice(0, 7);
+        const lastCommit = yield getLatestCommit(octokit, prId, repo);
+        const job = yield getJob(octokit, repo, parseInt(runId), jobName);
+        const shortSha = lastCommit.sha.slice(0, 7);
         const actionContext = {
-            stagingUrl: `${baseStagingUrl}/commit/${shortSha}/`,
+            stagingUrl: `${baseStagingUrl}/pr/${prId}/`,
+            commitUrl: `${baseStagingUrl}/commit/${shortSha}/`,
             buildTime: new Date(Date.parse(buildTime)),
             buildDuration: parsedBuildDuration,
-            runLink: buildRunLink(repo, runId),
-            sha: github_1.context.sha,
+            runLink: (_a = job === null || job === void 0 ? void 0 : job.html_url) !== null && _a !== void 0 ? _a : buildRunLink(repo, runId),
+            sha: lastCommit.sha,
             shortSha,
             comment,
             octokit,
@@ -3886,11 +3944,11 @@ function buildCommitLink(actionContext) {
  */
 function pre(actionContext) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { prId, stagingUrl: url, shortSha, buildTime, runLink } = actionContext;
+        const { prId, stagingUrl: url, shortSha, buildTime, runLink, commitUrl, } = actionContext;
         const current = {
             emoji: templates_1.BuildEmoji.InProgress,
             status: templates_1.BuildStatus.InProgress,
-            deployUrl: url,
+            deployUrl: commitUrl,
             commitSha: shortSha,
             commitLink: buildCommitLink(actionContext),
             buildTime: templates_1.date(buildTime),
@@ -3909,11 +3967,11 @@ function pre(actionContext) {
  */
 function post(actionContext) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { prId, stagingUrl: url, shortSha, buildTime, buildDuration, runLink, } = actionContext;
+        const { prId, stagingUrl: url, shortSha, buildTime, buildDuration, runLink, commitUrl, } = actionContext;
         const current = {
             emoji: templates_1.BuildEmoji.Success,
             status: templates_1.BuildStatus.Success,
-            deployUrl: url,
+            deployUrl: commitUrl,
             commitSha: shortSha,
             commitLink: buildCommitLink(actionContext),
             buildTime: templates_1.date(buildTime),
@@ -15078,7 +15136,7 @@ function bootstrap() {
         try {
             const mode = core.getInput("mode");
             if (mode === "pre" || mode === "post")
-                main_1.run(mode);
+                yield main_1.run(mode);
         }
         catch (error) {
             core.setFailed(error.message);

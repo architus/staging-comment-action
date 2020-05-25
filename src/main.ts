@@ -1,7 +1,11 @@
 /* eslint-disable @typescript-eslint/camelcase */
 import * as core from "@actions/core";
 import { GitHub, context } from "@actions/github";
-import { IssuesListCommentsForRepoResponseData } from "@octokit/types";
+import {
+  IssuesListCommentsForRepoResponseData,
+  ReposListCommitsResponseData,
+  ActionsListJobsForWorkflowRunResponseData,
+} from "@octokit/types";
 import {
   isStagingComment,
   getBuildState,
@@ -19,6 +23,10 @@ import {
 type EventMode = "pre" | "post" | "failure";
 type Item<T> = T extends (infer I)[] ? I : never;
 type Comment = Item<IssuesListCommentsForRepoResponseData>;
+type Commit = Item<ReposListCommitsResponseData>;
+type Job = Item<ActionsListJobsForWorkflowRunResponseData["jobs"]>;
+type Nil = null | undefined;
+
 interface Repo {
   repo: string;
   owner: string;
@@ -28,9 +36,10 @@ interface Repo {
  * Common parameters sent to action states
  */
 interface ActionContext {
-  buildDuration: number | null;
-  comment: Comment | null;
+  buildDuration: number | Nil;
+  comment: Comment | Nil;
   stagingUrl: string;
+  commitUrl: string;
   shortSha: string;
   octokit: GitHub;
   buildTime: Date;
@@ -51,7 +60,7 @@ async function getActionComment(
   octokit: GitHub,
   prId: number,
   repo: Repo,
-): Promise<Comment | null> {
+): Promise<Comment | Nil> {
   const { data: thisUser } = await octokit.users.getAuthenticated();
   const { data: comments } = await octokit.issues.listComments({
     issue_number: prId,
@@ -68,6 +77,68 @@ async function getActionComment(
 }
 
 /**
+ * Gets the SHA of the latest commit on the branch for the given PR
+ * @param octokit - Current Octokit GitHub API binding instance
+ * @param prId - PR ID for the current CI context
+ * @param repo - GitHub repo for the current CI context
+ */
+async function getLatestCommit(
+  octokit: GitHub,
+  prId: number,
+  repo: Repo,
+): Promise<Commit> {
+  const { data: pr } = await octokit.pulls.get({ ...repo, pull_number: prId });
+  const branch = pr.head.ref;
+  if (pr.head.repo.full_name !== `${repo.owner}/${repo.repo}`) {
+    const message = `Skipping build for untrusted external repository ${pr.head.repo.full_name}`;
+    throw new Error(message);
+  } else {
+    // Use the latest commit from the branch
+    const { data: commits } = await octokit.repos.listCommits({
+      ...repo,
+      sha: branch,
+      // Get the latest commit on the branch
+      per_page: 1,
+    });
+    if (commits.length === 0)
+      throw new Error(`No commits found in branch ${branch}`);
+    return (commits[0] as unknown) as Commit;
+  }
+}
+
+/**
+ * Attempts to find the currently running job from the API
+ * @param octokit - Current Octokit GitHub API binding instance
+ * @param repo - GitHub repo for the current CI context
+ * @param runId - GitHub actions workflow run Id
+ * @param jobName - GitHub actions job name for the staging job
+ */
+async function getJob(
+  octokit: GitHub,
+  repo: Repo,
+  runId: number,
+  jobName: string | Nil,
+): Promise<Job | Nil> {
+  if (jobName == null) {
+    core.info(`Skipping job matching; linking to overall workflow run`);
+    return null;
+  }
+
+  const { data } = await octokit.actions.listJobsForWorkflowRun({
+    ...repo,
+    run_id: runId,
+  });
+  const foundJobs = data.jobs.filter((job) => job.name === jobName);
+  if (foundJobs.length === 0) {
+    core.warning(
+      `No jobs matching job.name = ${jobName} for workflow run with id ${runId}`,
+    );
+    return null;
+  }
+  return foundJobs[0];
+}
+
+/**
  * Runs the main action logic depending on the mode
  * @param mode - Event mode for the action (i.e. phase of CI job)
  */
@@ -76,6 +147,8 @@ export async function run(mode: EventMode): Promise<void> {
   const baseStagingUrl: string = core.getInput("base-staging-url");
   const buildTime: string = core.getInput("build-time");
   const buildDuration: string = core.getInput("build-duration");
+  const jobName: string | Nil = core.getInput("job-name");
+
   const parsedBuildDuration =
     buildDuration.trim().length > 0 ? parseInt(buildDuration.trim()) : null;
   const octokit = new GitHub(token);
@@ -83,19 +156,31 @@ export async function run(mode: EventMode): Promise<void> {
   const { repo } = context;
   const comment = await getActionComment(octokit, prId, repo);
 
-  const runId: string | undefined = process.env.GITHUB_RUN_ID;
+  if (comment != null) {
+    core.debug(
+      `Found existing CI comment ${comment.id} by ${comment.user.login} on PR ${prId}`,
+    );
+  } else {
+    core.debug(`Found no existing CI comment on PR ${prId}`);
+  }
+
+  const runId: string | Nil = process.env.GITHUB_RUN_ID;
   if (runId == null)
     throw new Error(
       `Environment variable "GITHUB_RUN_ID" undefined; couldn't link to action run`,
     );
 
-  const shortSha = context.sha.slice(0, 7);
+  const lastCommit = await getLatestCommit(octokit, prId, repo);
+  const job = await getJob(octokit, repo, parseInt(runId), jobName);
+  const shortSha = lastCommit.sha.slice(0, 7);
+
   const actionContext: ActionContext = {
-    stagingUrl: `${baseStagingUrl}/commit/${shortSha}/`,
+    stagingUrl: `${baseStagingUrl}/pr/${prId}/`,
+    commitUrl: `${baseStagingUrl}/commit/${shortSha}/`,
     buildTime: new Date(Date.parse(buildTime)),
     buildDuration: parsedBuildDuration,
-    runLink: buildRunLink(repo, runId),
-    sha: context.sha,
+    runLink: job?.html_url ?? buildRunLink(repo, runId),
+    sha: lastCommit.sha,
     shortSha,
     comment,
     octokit,
@@ -216,12 +301,19 @@ function buildCommitLink(actionContext: ActionContext): string {
  * @param actionContext - Base action context
  */
 async function pre(actionContext: ActionContext): Promise<void> {
-  const { prId, stagingUrl: url, shortSha, buildTime, runLink } = actionContext;
+  const {
+    prId,
+    stagingUrl: url,
+    shortSha,
+    buildTime,
+    runLink,
+    commitUrl,
+  } = actionContext;
 
   const current: BuildEntry = {
     emoji: BuildEmoji.InProgress,
     status: BuildStatus.InProgress,
-    deployUrl: url,
+    deployUrl: commitUrl,
     commitSha: shortSha,
     commitLink: buildCommitLink(actionContext),
     buildTime: date(buildTime),
@@ -250,12 +342,13 @@ async function post(actionContext: ActionContext): Promise<void> {
     buildTime,
     buildDuration,
     runLink,
+    commitUrl,
   } = actionContext;
 
   const current: BuildEntry = {
     emoji: BuildEmoji.Success,
     status: BuildStatus.Success,
-    deployUrl: url,
+    deployUrl: commitUrl,
     commitSha: shortSha,
     commitLink: buildCommitLink(actionContext),
     buildTime: date(buildTime),

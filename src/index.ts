@@ -7,7 +7,7 @@ import { run } from "./main";
 export async function bootstrap(): Promise<void> {
   try {
     const mode: string = core.getInput("mode");
-    if (mode === "pre" || mode === "post") run(mode);
+    if (mode === "pre" || mode === "post") await run(mode);
   } catch (error) {
     core.setFailed(error.message);
   }
