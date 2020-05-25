@@ -8,10 +8,9 @@ import { run } from "./main";
 async function cleanup(): Promise<void> {
   try {
     const isSuccess = core.getState("stagingSuccess") === "true";
-    const shouldRun = core.getState("handledCleanup") !== "true";
+    const shouldRun = core.getInput("mode") !== "post";
 
     if (!isSuccess && shouldRun) {
-      core.saveState("handledCleanup", "true");
       await run("failure");
     }
   } catch (error) {

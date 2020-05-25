@@ -3791,6 +3791,7 @@ function run(mode) {
                 yield pre(actionContext);
                 break;
             case "post":
+                core.saveState("stagingSuccess", "true");
                 yield post(actionContext);
                 break;
             case "failure":

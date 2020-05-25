@@ -107,6 +107,7 @@ export async function run(mode: EventMode): Promise<void> {
       await pre(actionContext);
       break;
     case "post":
+      core.saveState("stagingSuccess", "true");
       await post(actionContext);
       break;
     case "failure":

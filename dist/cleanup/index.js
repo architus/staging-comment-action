@@ -3791,6 +3791,7 @@ function run(mode) {
                 yield pre(actionContext);
                 break;
             case "post":
+                core.saveState("stagingSuccess", "true");
                 yield post(actionContext);
                 break;
             case "failure":
@@ -21744,9 +21745,8 @@ function cleanup() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const isSuccess = core.getState("stagingSuccess") === "true";
-            const shouldRun = core.getState("handledCleanup") !== "true";
+            const shouldRun = core.getInput("mode") !== "post";
             if (!isSuccess && shouldRun) {
-                core.saveState("handledCleanup", "true");
                 yield main_1.run("failure");
             }
         }
