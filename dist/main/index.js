@@ -3776,7 +3776,7 @@ function run(mode) {
             throw new Error(`Environment variable "GITHUB_RUN_ID" undefined; couldn't link to action run`);
         const actionContext = {
             stagingUrl: `${baseStagingUrl}/pr/${prId}`,
-            buildTime: new Date(buildTime),
+            buildTime: new Date(Date.parse(buildTime)),
             buildDuration: parsedBuildDuration,
             runLink: buildRunLink(repo, runId),
             shortSha: github_1.context.sha.slice(0, 7),
@@ -22505,6 +22505,8 @@ var BuildEmoji;
     BuildEmoji["Failure"] = "\uD83D\uDD34";
 })(BuildEmoji = exports.BuildEmoji || (exports.BuildEmoji = {}));
 const COMMENT_TAG = "<!-- ci/staging-comment-action -->";
+const HEADER_ROW = "| | Status | Url | Commit | Started at | Duration | Job |";
+const SEPARATOR_ROW = "|-|-|-|-|-|-|-|";
 const NULL = "~";
 /**
  * Determines if the given comment comes from this action, where it should include a
@@ -22515,7 +22517,7 @@ function isStagingComment(body) {
     return body.trim().startsWith(COMMENT_TAG);
 }
 exports.isStagingComment = isStagingComment;
-const BUILD_ENTRY_REGEX = /^|.*|\s*$/;
+const BUILD_ENTRY_REGEX = /^\|.*\|\s*$/;
 /**
  * Gets each build entry from a comment body, splitting the top entry from the previous
  * entries, if they exist. Throws an Exception if parsing fails or there aren't enough
@@ -22527,7 +22529,7 @@ function getBuildState(body) {
     const entries = [];
     for (const line of lines) {
         if (line.match(BUILD_ENTRY_REGEX) &&
-            !(line.startsWith("| | Status |") || line.startsWith("|-|-|"))) {
+            !(line.startsWith(HEADER_ROW) || line.startsWith(SEPARATOR_ROW))) {
             entries.push(parseBuildEntry(line));
         }
     }
@@ -22609,14 +22611,14 @@ ${exports.details(state)}
 exports.details = (state) => `
 #### Build details
 
-| | Status | Url | Commit | Started at | Duration | Action run |
-|-|-|-|-|-|-|-|
+${HEADER_ROW}
+${SEPARATOR_ROW}
 ${exports.entry(state.latest)}
 
 <details><summary>Previous builds</summary>
 <p>
 
-${previous(state.previous.map(exports.entry))}
+${previous(state.previous)}
 
 </p>
 </details>`;
@@ -22673,7 +22675,11 @@ exports.date = (dateTime) => {
  * @param previousBuilds - String of pre-rendered Markdown content for the table body
  */
 const previous = (previousBuilds) => previousBuilds.length > 0
-    ? previousBuilds.join("\n")
+    ? `
+        ${HEADER_ROW}
+        ${SEPARATOR_ROW}
+        ${previousBuilds.map(exports.entry).join("\n")}
+      `.trim()
     : `No previous builds found`;
 
 

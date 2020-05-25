@@ -48,6 +48,8 @@ export interface BuildState {
 }
 
 const COMMENT_TAG = "<!-- ci/staging-comment-action -->";
+const HEADER_ROW = "| | Status | Url | Commit | Started at | Duration | Job |";
+const SEPARATOR_ROW = "|-|-|-|-|-|-|-|";
 const NULL = "~";
 
 /**
@@ -59,7 +61,7 @@ export function isStagingComment(body: string): boolean {
   return body.trim().startsWith(COMMENT_TAG);
 }
 
-const BUILD_ENTRY_REGEX = /^|.*|\s*$/;
+const BUILD_ENTRY_REGEX = /^\|.*\|\s*$/;
 
 /**
  * Gets each build entry from a comment body, splitting the top entry from the previous
@@ -73,7 +75,7 @@ export function getBuildState(body: string): BuildState {
   for (const line of lines) {
     if (
       line.match(BUILD_ENTRY_REGEX) &&
-      !(line.startsWith("| | Status |") || line.startsWith("|-|-|"))
+      !(line.startsWith(HEADER_ROW) || line.startsWith(SEPARATOR_ROW))
     ) {
       entries.push(parseBuildEntry(line));
     }
@@ -168,14 +170,14 @@ ${details(state)}
 export const details = (state: BuildState): string => `
 #### Build details
 
-| | Status | Url | Commit | Started at | Duration | Action run |
-|-|-|-|-|-|-|-|
+${HEADER_ROW}
+${SEPARATOR_ROW}
 ${entry(state.latest)}
 
 <details><summary>Previous builds</summary>
 <p>
 
-${previous(state.previous.map(entry))}
+${previous(state.previous)}
 
 </p>
 </details>`;
@@ -251,7 +253,11 @@ export const date = (dateTime: Date): string => {
  * Renders the previous builds
  * @param previousBuilds - String of pre-rendered Markdown content for the table body
  */
-const previous = (previousBuilds: string[]): string =>
+const previous = (previousBuilds: BuildEntry[]): string =>
   previousBuilds.length > 0
-    ? previousBuilds.join("\n")
+    ? `
+        ${HEADER_ROW}
+        ${SEPARATOR_ROW}
+        ${previousBuilds.map(entry).join("\n")}
+      `.trim()
     : `No previous builds found`;

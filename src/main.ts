@@ -91,7 +91,7 @@ export async function run(mode: EventMode): Promise<void> {
 
   const actionContext: ActionContext = {
     stagingUrl: `${baseStagingUrl}/pr/${prId}`,
-    buildTime: new Date(buildTime),
+    buildTime: new Date(Date.parse(buildTime)),
     buildDuration: parsedBuildDuration,
     runLink: buildRunLink(repo, runId),
     shortSha: context.sha.slice(0, 7),
