@@ -29977,7 +29977,7 @@ exports.date = (jsDateTime) => {
     var _a;
     const timeZone = (_a = process.env.TIME_ZONE) !== null && _a !== void 0 ? _a : "America/New_York";
     const dateTime = luxon_1.DateTime.fromJSDate(jsDateTime).setZone(timeZone);
-    return `${dateTime.toFormat("LLL d")} at ${dateTime.toFormat("ttt")}`;
+    return `${dateTime.toFormat("LLL d")} at ${dateTime.toFormat("h:mm a ZZZZ")}`;
 };
 /**
  * Renders the previous builds

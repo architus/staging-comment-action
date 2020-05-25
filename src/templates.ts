@@ -236,7 +236,7 @@ const link = (text: string, url: string): string => `[${text}](${url})`;
 export const date = (jsDateTime: Date): string => {
   const timeZone = process.env.TIME_ZONE ?? "America/New_York";
   const dateTime = DateTime.fromJSDate(jsDateTime).setZone(timeZone);
-  return `${dateTime.toFormat("LLL d")} at ${dateTime.toFormat("ttt")}`;
+  return `${dateTime.toFormat("LLL d")} at ${dateTime.toFormat("h:mm a ZZZZ")}`;
 };
 
 /**
