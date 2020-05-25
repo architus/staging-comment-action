@@ -3757,6 +3757,18 @@ function getActionComment(octokit, prId, repo) {
     });
 }
 /**
+ * Gets the GitHub API object for the given PR
+ * @param octokit - Current Octokit GitHub API binding instance
+ * @param prId - PR ID for the current CI context
+ * @param repo - GitHub repo for the current CI context
+ */
+function getPullRequest(octokit, prId, repo) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const { data: pr } = yield octokit.pulls.get(Object.assign(Object.assign({}, repo), { pull_number: prId }));
+        return pr;
+    });
+}
+/**
  * Gets the SHA of the latest commit on the branch for the given PR
  * @param octokit - Current Octokit GitHub API binding instance
  * @param prId - PR ID for the current CI context
@@ -3764,7 +3776,7 @@ function getActionComment(octokit, prId, repo) {
  */
 function getLatestCommit(octokit, prId, repo) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { data: pr } = yield octokit.pulls.get(Object.assign(Object.assign({}, repo), { pull_number: prId }));
+        const pr = yield getPullRequest(octokit, prId, repo);
         const branch = pr.head.ref;
         if (pr.head.repo.full_name !== `${repo.owner}/${repo.repo}`) {
             const message = `Skipping build for untrusted external repository ${pr.head.repo.full_name}`;
@@ -3777,7 +3789,7 @@ function getLatestCommit(octokit, prId, repo) {
                 per_page: 1 }));
             if (commits.length === 0)
                 throw new Error(`No commits found in branch ${branch}`);
-            return commits[0];
+            return [commits[0], branch];
         }
     });
 }
@@ -3817,8 +3829,49 @@ function run(mode) {
         const jobName = core.getInput("job-name");
         const parsedBuildDuration = buildDuration.trim().length > 0 ? parseInt(buildDuration.trim()) : null;
         const octokit = new github_1.GitHub(token);
-        const prId = github_1.context.issue.number;
         const { repo } = github_1.context;
+        const runId = process.env.GITHUB_RUN_ID;
+        if (runId == null)
+            throw new Error(`Environment variable "GITHUB_RUN_ID" undefined; couldn't link to action run`);
+        const job = yield getJob(octokit, repo, parseInt(runId), jobName);
+        const isPr = github_1.context.eventName === "pull_request";
+        let sha;
+        let branch;
+        if (isPr) {
+            // Extract commit SHA from the latest commit on the PR's head branch
+            const prId = github_1.context.issue.number;
+            const [lastCommit, lastCommitBranch] = yield getLatestCommit(octokit, prId, repo);
+            sha = lastCommit.sha;
+            branch = lastCommitBranch;
+        }
+        else {
+            // Extract the commit SHA/branch from the environment
+            sha = github_1.context.sha;
+            branch = github_1.context.ref.replace(/^refs\/heads\//, "");
+        }
+        const shortSha = sha.slice(0, 7);
+        const prId = isPr ? github_1.context.issue.number : 0;
+        const commitUrl = `${baseStagingUrl}/commit/${shortSha}/`;
+        const stagingUrl = isPr ? `${baseStagingUrl}/pr/${prId}/` : commitUrl;
+        // Output global information about build
+        core.setOutput("runId", runId);
+        core.setOutput("jobId", job === null || job === void 0 ? void 0 : job.id);
+        core.setOutput("eventName", github_1.context.eventName);
+        core.setOutput("deployUrl", stagingUrl);
+        core.setOutput("branch", branch);
+        core.setOutput("sha", sha);
+        core.setOutput("commitUrl", commitUrl);
+        if (isPr) {
+            // Output additional information for PRs
+            const pr = yield getPullRequest(octokit, prId, repo);
+            core.setOutput("prId", prId);
+            core.setOutput("baseBranch", pr.base.ref);
+        }
+        // Stop execution if not a PR
+        if (!isPr) {
+            core.info("Not a PR; setting outputs and returning early");
+            return;
+        }
         const comment = yield getActionComment(octokit, prId, repo);
         if (comment != null) {
             core.debug(`Found existing CI comment ${comment.id} by ${comment.user.login} on PR ${prId}`);
@@ -3826,20 +3879,14 @@ function run(mode) {
         else {
             core.debug(`Found no existing CI comment on PR ${prId}`);
         }
-        const runId = process.env.GITHUB_RUN_ID;
-        if (runId == null)
-            throw new Error(`Environment variable "GITHUB_RUN_ID" undefined; couldn't link to action run`);
-        const lastCommit = yield getLatestCommit(octokit, prId, repo);
-        const job = yield getJob(octokit, repo, parseInt(runId), jobName);
-        const shortSha = lastCommit.sha.slice(0, 7);
         const actionContext = {
-            stagingUrl: `${baseStagingUrl}/pr/${prId}/`,
-            commitUrl: `${baseStagingUrl}/commit/${shortSha}/`,
+            runLink: (_a = job === null || job === void 0 ? void 0 : job.html_url) !== null && _a !== void 0 ? _a : buildRunLink(repo, runId),
             buildTime: new Date(Date.parse(buildTime)),
             buildDuration: parsedBuildDuration,
-            runLink: (_a = job === null || job === void 0 ? void 0 : job.html_url) !== null && _a !== void 0 ? _a : buildRunLink(repo, runId),
-            sha: lastCommit.sha,
+            stagingUrl,
+            commitUrl,
             shortSha,
+            sha,
             comment,
             octokit,
             repo,

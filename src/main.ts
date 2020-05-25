@@ -5,6 +5,7 @@ import {
   IssuesListCommentsForRepoResponseData,
   ReposListCommitsResponseData,
   ActionsListJobsForWorkflowRunResponseData,
+  PullsGetResponseData,
 } from "@octokit/types";
 import {
   isStagingComment,
@@ -24,6 +25,7 @@ type EventMode = "pre" | "post" | "failure";
 type Item<T> = T extends (infer I)[] ? I : never;
 type Comment = Item<IssuesListCommentsForRepoResponseData>;
 type Commit = Item<ReposListCommitsResponseData>;
+type PullRequest = PullsGetResponseData;
 type Job = Item<ActionsListJobsForWorkflowRunResponseData["jobs"]>;
 type Nil = null | undefined;
 
@@ -77,6 +79,21 @@ async function getActionComment(
 }
 
 /**
+ * Gets the GitHub API object for the given PR
+ * @param octokit - Current Octokit GitHub API binding instance
+ * @param prId - PR ID for the current CI context
+ * @param repo - GitHub repo for the current CI context
+ */
+async function getPullRequest(
+  octokit: GitHub,
+  prId: number,
+  repo: Repo,
+): Promise<PullRequest> {
+  const { data: pr } = await octokit.pulls.get({ ...repo, pull_number: prId });
+  return (pr as unknown) as PullRequest;
+}
+
+/**
  * Gets the SHA of the latest commit on the branch for the given PR
  * @param octokit - Current Octokit GitHub API binding instance
  * @param prId - PR ID for the current CI context
@@ -86,8 +103,8 @@ async function getLatestCommit(
   octokit: GitHub,
   prId: number,
   repo: Repo,
-): Promise<Commit> {
-  const { data: pr } = await octokit.pulls.get({ ...repo, pull_number: prId });
+): Promise<[Commit, string]> {
+  const pr = await getPullRequest(octokit, prId, repo);
   const branch = pr.head.ref;
   if (pr.head.repo.full_name !== `${repo.owner}/${repo.repo}`) {
     const message = `Skipping build for untrusted external repository ${pr.head.repo.full_name}`;
@@ -102,7 +119,7 @@ async function getLatestCommit(
     });
     if (commits.length === 0)
       throw new Error(`No commits found in branch ${branch}`);
-    return (commits[0] as unknown) as Commit;
+    return [(commits[0] as unknown) as Commit, branch];
   }
 }
 
@@ -152,10 +169,63 @@ export async function run(mode: EventMode): Promise<void> {
   const parsedBuildDuration =
     buildDuration.trim().length > 0 ? parseInt(buildDuration.trim()) : null;
   const octokit = new GitHub(token);
-  const prId = context.issue.number;
   const { repo } = context;
-  const comment = await getActionComment(octokit, prId, repo);
 
+  const runId: string | Nil = process.env.GITHUB_RUN_ID;
+  if (runId == null)
+    throw new Error(
+      `Environment variable "GITHUB_RUN_ID" undefined; couldn't link to action run`,
+    );
+
+  const job = await getJob(octokit, repo, parseInt(runId), jobName);
+  const isPr = context.eventName === "pull_request";
+
+  let sha: string;
+  let branch: string;
+  if (isPr) {
+    // Extract commit SHA from the latest commit on the PR's head branch
+    const prId = context.issue.number;
+    const [lastCommit, lastCommitBranch] = await getLatestCommit(
+      octokit,
+      prId,
+      repo,
+    );
+    sha = lastCommit.sha;
+    branch = lastCommitBranch;
+  } else {
+    // Extract the commit SHA/branch from the environment
+    sha = context.sha;
+    branch = context.ref.replace(/^refs\/heads\//, "");
+  }
+
+  const shortSha = sha.slice(0, 7);
+  const prId = isPr ? context.issue.number : 0;
+  const commitUrl = `${baseStagingUrl}/commit/${shortSha}/`;
+  const stagingUrl = isPr ? `${baseStagingUrl}/pr/${prId}/` : commitUrl;
+
+  // Output global information about build
+  core.setOutput("runId", runId);
+  core.setOutput("jobId", job?.id);
+  core.setOutput("eventName", context.eventName);
+  core.setOutput("deployUrl", stagingUrl);
+  core.setOutput("branch", branch);
+  core.setOutput("sha", sha);
+  core.setOutput("commitUrl", commitUrl);
+
+  if (isPr) {
+    // Output additional information for PRs
+    const pr = await getPullRequest(octokit, prId, repo);
+    core.setOutput("prId", prId);
+    core.setOutput("baseBranch", pr.base.ref);
+  }
+
+  // Stop execution if not a PR
+  if (!isPr) {
+    core.info("Not a PR; setting outputs and returning early");
+    return;
+  }
+
+  const comment = await getActionComment(octokit, prId, repo);
   if (comment != null) {
     core.debug(
       `Found existing CI comment ${comment.id} by ${comment.user.login} on PR ${prId}`,
@@ -164,24 +234,14 @@ export async function run(mode: EventMode): Promise<void> {
     core.debug(`Found no existing CI comment on PR ${prId}`);
   }
 
-  const runId: string | Nil = process.env.GITHUB_RUN_ID;
-  if (runId == null)
-    throw new Error(
-      `Environment variable "GITHUB_RUN_ID" undefined; couldn't link to action run`,
-    );
-
-  const lastCommit = await getLatestCommit(octokit, prId, repo);
-  const job = await getJob(octokit, repo, parseInt(runId), jobName);
-  const shortSha = lastCommit.sha.slice(0, 7);
-
   const actionContext: ActionContext = {
-    stagingUrl: `${baseStagingUrl}/pr/${prId}/`,
-    commitUrl: `${baseStagingUrl}/commit/${shortSha}/`,
+    runLink: job?.html_url ?? buildRunLink(repo, runId),
     buildTime: new Date(Date.parse(buildTime)),
     buildDuration: parsedBuildDuration,
-    runLink: job?.html_url ?? buildRunLink(repo, runId),
-    sha: lastCommit.sha,
+    stagingUrl,
+    commitUrl,
     shortSha,
+    sha,
     comment,
     octokit,
     repo,
