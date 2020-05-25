@@ -1,3 +1,5 @@
+import { DateTime } from "luxon";
+
 /**
  * Build status text
  */
@@ -227,34 +229,15 @@ export const duration = (totalSeconds: number): string => {
  */
 const link = (text: string, url: string): string => `[${text}](${url})`;
 
-const months = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-
 /**
  * Formats a date object into a markdown string
  * @param dateTime - JavaScript date object
  */
-export const date = (dateTime: Date): string => {
-  const month = months[dateTime.getMonth()];
-  const day = dateTime.getDate();
-  const hours = dateTime.getHours();
-  const hoursTrimmed = hours % 12;
-  const amPm = hours >= 12 ? "PM" : "AM";
-  const minutes = dateTime.getMinutes();
-  const seconds = dateTime.getSeconds();
-  return `${month} ${day} at ${hoursTrimmed}:${minutes}:${seconds} ${amPm}`;
+export const date = (jsDateTime: Date): string => {
+  const dateTime = DateTime.fromJSDate(jsDateTime);
+  return dateTime
+    .setZone(process.env.TIME_ZONE ?? "America/New_York")
+    .toFormat("LLL d at ttt");
 };
 
 /**

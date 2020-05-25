@@ -27,7 +27,9 @@
   "dependencies": {
     "@actions/core": "^1.2.0",
     "@actions/github": "^2.2.0",
-    "@octokit/rest": "^17.9.2"
+    "@octokit/rest": "^17.9.2",
+    "@types/luxon": "^1.24.0",
+    "luxon": "^1.24.1"
   },
   "devDependencies": {
     "@types/node": "^12.7.12",
