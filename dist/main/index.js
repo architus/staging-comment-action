@@ -3795,6 +3795,7 @@ function getJob(octokit, repo, runId, jobName) {
             return null;
         }
         const { data } = yield octokit.actions.listJobsForWorkflowRun(Object.assign(Object.assign({}, repo), { run_id: runId }));
+        core.debug(JSON.stringify(data));
         const foundJobs = data.jobs.filter((job) => job.name === jobName);
         if (foundJobs.length === 0) {
             core.warning(`No jobs matching job.name = ${jobName} for workflow run with id ${runId}`);

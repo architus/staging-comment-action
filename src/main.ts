@@ -128,6 +128,7 @@ async function getJob(
     ...repo,
     run_id: runId,
   });
+  core.debug(JSON.stringify(data));
   const foundJobs = data.jobs.filter((job) => job.name === jobName);
   if (foundJobs.length === 0) {
     core.warning(
