@@ -22544,12 +22544,14 @@ exports.getBuildState = getBuildState;
  * @param line - Line from comment body that is a table line
  */
 function parseBuildEntry(line) {
-    const strippedLine = line
+    const cells = line
         .trim()
         .replace(/^(|)/, "")
-        .replace(/(|)$/, "");
-    const cells = strippedLine.split("|").map((cell) => cell.trim());
-    if (cells.length !== 8)
+        .replace(/(|)$/, "")
+        .split("|")
+        .map((cell) => cell.trim())
+        .filter((cell) => cell.length > 0);
+    if (cells.length !== 7)
         throw new Error(`Incorrect number of cells in build entry: ${JSON.stringify(cells)}`);
     const [commitSha, commitLink] = parseLink(cells[3]);
     return {
