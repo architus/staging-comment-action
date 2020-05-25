@@ -102,7 +102,6 @@ export async function run(mode: EventMode): Promise<void> {
     prId,
   };
 
-  core.debug(`stagingSuccess state: ${core.getState("stagingSuccess")}`);
   switch (mode) {
     case "pre":
       await pre(actionContext);
@@ -114,7 +113,6 @@ export async function run(mode: EventMode): Promise<void> {
     case "failure":
       await failure(actionContext);
   }
-  core.debug(`stagingSuccess state: ${core.getState("stagingSuccess")}`);
 }
 
 /**

@@ -3786,7 +3786,6 @@ function run(mode) {
             repo,
             prId,
         };
-        core.debug(`stagingSuccess state: ${core.getState("stagingSuccess")}`);
         switch (mode) {
             case "pre":
                 yield pre(actionContext);
@@ -3798,7 +3797,6 @@ function run(mode) {
             case "failure":
                 yield failure(actionContext);
         }
-        core.debug(`stagingSuccess state: ${core.getState("stagingSuccess")}`);
     });
 }
 exports.run = run;
@@ -22585,8 +22583,7 @@ function parseLink(markdown) {
  */
 exports.failed = ({ state }) => `
 ${COMMENT_TAG}
-There was an error building a deploy preview for the last commit.
-For more details, check the output of the action run [here](${state.latest.runLink}).
+There was an error building a deploy preview for the last commit. For more details, check the output of the action run [here](${state.latest.runLink}).
 
 ${exports.details(state)}
 `;
@@ -22595,8 +22592,7 @@ ${exports.details(state)}
  */
 exports.successful = ({ prId, url, state }) => `
 ${COMMENT_TAG}
-A deploy preview has been created for this Pull Request (#${prId}),
-which is available at ${url}.
+A deploy preview has been created for this Pull Request (#${prId}), which is available at ${url}.
 
 ${exports.details(state)}
 `.trim();
@@ -22605,8 +22601,7 @@ ${exports.details(state)}
  */
 exports.building = ({ prId, url, state }) => `
 ${COMMENT_TAG}
-A deploy preview is being created for this Pull Request (#${prId}),
-which will be available at ${url} once completed.
+A deploy preview is being created for this Pull Request (#${prId}), which will be available at ${url} once completed.
 
 ${exports.details(state)}
 `.trim();

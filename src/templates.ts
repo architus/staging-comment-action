@@ -134,8 +134,7 @@ function parseLink(markdown: string): [string, string] {
  */
 export const failed = ({ state }: CommentArgs): string => `
 ${COMMENT_TAG}
-There was an error building a deploy preview for the last commit.
-For more details, check the output of the action run [here](${
+There was an error building a deploy preview for the last commit. For more details, check the output of the action run [here](${
   state.latest.runLink
 }).
 
@@ -148,8 +147,7 @@ ${details(state)}
 export const successful = ({ prId, url, state }: CommentArgs): string =>
   `
 ${COMMENT_TAG}
-A deploy preview has been created for this Pull Request (#${prId}),
-which is available at ${url}.
+A deploy preview has been created for this Pull Request (#${prId}), which is available at ${url}.
 
 ${details(state)}
 `.trim();
@@ -160,8 +158,7 @@ ${details(state)}
 export const building = ({ prId, url, state }: CommentArgs): string =>
   `
 ${COMMENT_TAG}
-A deploy preview is being created for this Pull Request (#${prId}),
-which will be available at ${url} once completed.
+A deploy preview is being created for this Pull Request (#${prId}), which will be available at ${url} once completed.
 
 ${details(state)}
 `.trim();
