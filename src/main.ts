@@ -72,7 +72,7 @@ async function getActionComment(
  * @param mode - Event mode for the action (i.e. phase of CI job)
  */
 export async function run(mode: EventMode): Promise<void> {
-  const token: string = core.getInput("github-token");
+  const token: string = core.getInput("GITHUB_TOKEN");
   const baseStagingUrl: string = core.getInput("base-staging-url");
   const buildTime: string = core.getInput("build-time");
   const buildDuration: string = core.getInput("build-duration");

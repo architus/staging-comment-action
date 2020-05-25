@@ -3762,7 +3762,7 @@ function getActionComment(octokit, prId, repo) {
  */
 function run(mode) {
     return __awaiter(this, void 0, void 0, function* () {
-        const token = core.getInput("github-token");
+        const token = core.getInput("GITHUB_TOKEN");
         const baseStagingUrl = core.getInput("base-staging-url");
         const buildTime = core.getInput("build-time");
         const buildDuration = core.getInput("build-duration");
