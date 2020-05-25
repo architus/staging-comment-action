@@ -196,7 +196,7 @@ function updateState(
  * @param runId - Numeric unique Id for the current run, parsed from the environment
  */
 function buildRunLink(repo: Repo, runId: string): string {
-  return `https://github.com/${repo.owner}/${repo.repo}/runs/${runId}`;
+  return `https://github.com/${repo.owner}/${repo.repo}/actions/runs/${runId}`;
 }
 
 /**
