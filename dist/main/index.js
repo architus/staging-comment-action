@@ -29974,10 +29974,9 @@ const link = (text, url) => `[${text}](${url})`;
  */
 exports.date = (jsDateTime) => {
     var _a;
-    const dateTime = luxon_1.DateTime.fromJSDate(jsDateTime);
-    return dateTime
-        .setZone((_a = process.env.TIME_ZONE) !== null && _a !== void 0 ? _a : "America/New_York")
-        .toFormat("LLL d at ttt");
+    const timeZone = (_a = process.env.TIME_ZONE) !== null && _a !== void 0 ? _a : "America/New_York";
+    const dateTime = luxon_1.DateTime.fromJSDate(jsDateTime).setZone(timeZone);
+    return `${dateTime.toFormat("LLL d")} at ${dateTime.toFormat("ttt")}`;
 };
 /**
  * Renders the previous builds

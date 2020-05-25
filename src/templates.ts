@@ -234,10 +234,9 @@ const link = (text: string, url: string): string => `[${text}](${url})`;
  * @param dateTime - JavaScript date object
  */
 export const date = (jsDateTime: Date): string => {
-  const dateTime = DateTime.fromJSDate(jsDateTime);
-  return dateTime
-    .setZone(process.env.TIME_ZONE ?? "America/New_York")
-    .toFormat("LLL d at ttt");
+  const timeZone = process.env.TIME_ZONE ?? "America/New_York";
+  const dateTime = DateTime.fromJSDate(jsDateTime).setZone(timeZone);
+  return `${dateTime.toFormat("LLL d")} at ${dateTime.toFormat("ttt")}`;
 };
 
 /**
