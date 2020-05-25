@@ -116,7 +116,7 @@ function parseBuildEntry(line: string): BuildEntry {
   };
 }
 
-const MARKDOWN_LINK_REGEX = /^\((.*)\[(.*)\]\)$/;
+const MARKDOWN_LINK_REGEX = /^\[(.*)\]\((.*)\)$/;
 
 /**
  * Parses an inline markdown link into its `[text, url]` components, throwing an Exception
