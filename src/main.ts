@@ -205,8 +205,7 @@ export async function run(mode: EventMode): Promise<void> {
 
   // Output global information about build
   core.setOutput("runId", runId);
-  core.setOutput("jobId", job?.id);
-  core.setOutput("eventName", context.eventName);
+  core.setOutput("jobId", job?.id ?? "");
   core.setOutput("deployUrl", stagingUrl);
   core.setOutput("branch", branch);
   core.setOutput("sha", sha);
@@ -217,6 +216,9 @@ export async function run(mode: EventMode): Promise<void> {
     const pr = await getPullRequest(octokit, prId, repo);
     core.setOutput("prId", prId);
     core.setOutput("baseBranch", pr.base.ref);
+  } else {
+    core.setOutput("prId", "");
+    core.setOutput("baseBranch", "");
   }
 
   // Stop execution if not a PR

@@ -3856,7 +3856,6 @@ function run(mode) {
         // Output global information about build
         core.setOutput("runId", runId);
         core.setOutput("jobId", job === null || job === void 0 ? void 0 : job.id);
-        core.setOutput("eventName", github_1.context.eventName);
         core.setOutput("deployUrl", stagingUrl);
         core.setOutput("branch", branch);
         core.setOutput("sha", sha);
@@ -3866,6 +3865,10 @@ function run(mode) {
             const pr = yield getPullRequest(octokit, prId, repo);
             core.setOutput("prId", prId);
             core.setOutput("baseBranch", pr.base.ref);
+        }
+        else {
+            core.setOutput("prId", "");
+            core.setOutput("baseBranch", "");
         }
         // Stop execution if not a PR
         if (!isPr) {

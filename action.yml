@@ -1,15 +1,26 @@
 name: 'Architus staging comment action'
+author: 'architus'
 description: 'Adds comments to archit.us pull requests with build information/staging links'
+runs:
+  using: 'node12'
+  main: 'dist/main/index.js'
+  post: 'dist/cleanup/index.js'
+branding:
+  icon: 'edit'
+  color: 'purple'
+
 inputs:
   mode:
     description: 'Operation mode (either "pre" or "post"); used to display different messages during/after build'
-    default: 'post'
-    required: false
+    required: true
   base-staging-url:
     description: 'Base staging URL hosting the `upload-api` server'
     required: true
   build-time:
     description: 'Start of build. Must be passed into both beginning and end'
+    required: true
+  GITHUB_TOKEN:
+    description: 'GitHub API token'
     required: true
   build-duration:
     description: 'Length (in seconds) of build, passed only into the "post" invocation'
@@ -17,10 +28,21 @@ inputs:
   job-name:
     description: Name of the job this action is a part of, used for permalinking to runs
     required: false
-  GITHUB_TOKEN:
-    description: 'GitHub API token'
-    required: true
-runs:
-  using: 'node12'
-  main: 'dist/main/index.js'
-  post: 'dist/cleanup/index.js'
+
+outputs:
+  runId:
+    description: 'GitHub Actions run id the current action is a part of'
+  jobId:
+    description: 'GitHub Actions job id the current action is a part of'
+  deployUrl:
+    description: 'Staging URL for this run'
+  branch:
+    description: 'Branch for the current commit, or the head branch of the PR'
+  sha:
+    description: 'SHA for the current commit, or the latest commit on the head branch of the PR'
+  commitUrl:
+    description: 'Staging URL for the commit corresponding to the `sha` output'
+  prId:
+    description: 'PR number (empty if running on push)'
+  baseBranch:
+    description: 'PR base branch (empty if running on push)'
