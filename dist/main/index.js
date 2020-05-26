@@ -3820,7 +3820,7 @@ function getJob(octokit, repo, runId, jobName) {
  * @param mode - Event mode for the action (i.e. phase of CI job)
  */
 function run(mode) {
-    var _a;
+    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         const token = core.getInput("GITHUB_TOKEN");
         const baseStagingUrl = core.getInput("base-staging-url");
@@ -3855,7 +3855,7 @@ function run(mode) {
         const stagingUrl = isPr ? `${baseStagingUrl}/pr/${prId}/` : commitUrl;
         // Output global information about build
         core.setOutput("runId", runId);
-        core.setOutput("jobId", job === null || job === void 0 ? void 0 : job.id);
+        core.setOutput("jobId", (_a = job === null || job === void 0 ? void 0 : job.id) !== null && _a !== void 0 ? _a : "");
         core.setOutput("deployUrl", stagingUrl);
         core.setOutput("branch", branch);
         core.setOutput("sha", sha);
@@ -3883,7 +3883,7 @@ function run(mode) {
             core.debug(`Found no existing CI comment on PR ${prId}`);
         }
         const actionContext = {
-            runLink: (_a = job === null || job === void 0 ? void 0 : job.html_url) !== null && _a !== void 0 ? _a : buildRunLink(repo, runId),
+            runLink: (_b = job === null || job === void 0 ? void 0 : job.html_url) !== null && _b !== void 0 ? _b : buildRunLink(repo, runId),
             buildTime: new Date(Date.parse(buildTime)),
             buildDuration: parsedBuildDuration,
             stagingUrl,
@@ -15185,7 +15185,7 @@ function bootstrap() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const mode = core.getInput("mode");
-            if (mode === "pre" || mode === "post")
+            if (mode === "pre" || mode === "post" || mode === "failure")
                 yield main_1.run(mode);
         }
         catch (error) {

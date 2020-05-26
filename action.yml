@@ -4,7 +4,6 @@ description: 'Adds comments to archit.us pull requests with build information/st
 runs:
   using: 'node12'
   main: 'dist/main/index.js'
-  post: 'dist/cleanup/index.js'
 branding:
   icon: 'edit'
   color: 'purple'
