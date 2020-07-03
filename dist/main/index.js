@@ -34832,7 +34832,7 @@ function parseBuildEntry(line) {
         emoji: cells[0],
         status: cells[1],
         deployUrl: cells[2] === NULL ? null : parseLink(cells[2])[1],
-        commitSha: commitSha.replace("`", ""),
+        commitSha: commitSha.replace(/`/, ""),
         commitLink,
         buildTime: cells[4],
         buildDuration: cells[5] === NULL ? null : cells[5],
@@ -34905,7 +34905,7 @@ ${previous(state.previous)}
 /**
  * Renders a single build entry to Markdown
  */
-exports.entry = ({ emoji, status, deployUrl, commitSha, commitLink, buildTime, buildDuration, runLink, }) => `| ${emoji} | ${status} | ${deployUrl != null ? link("link", deployUrl) : NULL} | ${link(`\`${commitSha.replace("`", "")}\``, commitLink)} | ${buildTime} | ${buildDuration != null ? buildDuration : NULL} | ${link("link", runLink)} |
+exports.entry = ({ emoji, status, deployUrl, commitSha, commitLink, buildTime, buildDuration, runLink, }) => `| ${emoji} | ${status} | ${deployUrl != null ? link("link", deployUrl) : NULL} | ${link(`\`${commitSha}\``, commitLink)} | ${buildTime} | ${buildDuration != null ? buildDuration : NULL} | ${link("link", runLink)} |
 `.trim();
 /**
  * Renders a duration to a `4m 2s` format
