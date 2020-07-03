@@ -34832,7 +34832,7 @@ function parseBuildEntry(line) {
         emoji: cells[0],
         status: cells[1],
         deployUrl: cells[2] === NULL ? null : parseLink(cells[2])[1],
-        commitSha: commitSha.replace(/`/, ""),
+        commitSha: commitSha.replace(/`/g, ""),
         commitLink,
         buildTime: cells[4],
         buildDuration: cells[5] === NULL ? null : cells[5],

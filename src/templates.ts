@@ -114,7 +114,7 @@ function parseBuildEntry(line: string): BuildEntry {
     emoji: cells[0] as BuildEmoji,
     status: cells[1] as BuildStatus,
     deployUrl: cells[2] === NULL ? null : parseLink(cells[2])[1],
-    commitSha: commitSha.replace(/`/, ""),
+    commitSha: commitSha.replace(/`/g, ""),
     commitLink,
     buildTime: cells[4],
     buildDuration: cells[5] === NULL ? null : cells[5],
