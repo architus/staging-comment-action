@@ -38,6 +38,7 @@ export interface BuildEntry {
 export interface CommentArgs {
   prId: string;
   url: string;
+  tag?: string;
   state: BuildState;
 }
 
@@ -49,7 +50,9 @@ export interface BuildState {
   previous: BuildEntry[];
 }
 
-const COMMENT_TAG = "<!-- ci/staging-comment-action -->";
+const COMMENT_TAG = (tag?: string): string =>
+  `<!-- ci/staging-comment-action${tag != null ? `-${tag}` : ""} -->`;
+const COMMENT_TAG_START = "<!-- ci/staging-comment-action";
 const HEADER_ROW = "| | Status | Url | Commit | Started at | Duration | Job |";
 const SEPARATOR_ROW = "|-|-|-|-|-|-|-|";
 const NULL = "~";
@@ -59,8 +62,16 @@ const NULL = "~";
  * hidden HTML comment at the beginning (see `COMMENT_TAG`)
  * @param body - Comment body
  */
-export function isStagingComment(body: string): boolean {
-  return body.trim().startsWith(COMMENT_TAG);
+export function isStagingComment(body: string, tag?: string): boolean {
+  const trimmed = body.trim();
+  if (!trimmed.startsWith(COMMENT_TAG_START)) return false;
+  const parsedTag = trimmed.substring(
+    COMMENT_TAG_START.length,
+    trimmed.indexOf(" -->"),
+  );
+
+  if (tag == null) return parsedTag === "";
+  return parsedTag === `-${tag}`;
 }
 
 const BUILD_ENTRY_REGEX = /^\|.*\|\s*$/;
@@ -110,7 +121,7 @@ function parseBuildEntry(line: string): BuildEntry {
     emoji: cells[0] as BuildEmoji,
     status: cells[1] as BuildStatus,
     deployUrl: cells[2] === NULL ? null : parseLink(cells[2])[1],
-    commitSha,
+    commitSha: commitSha.replace("`", ""),
     commitLink,
     buildTime: cells[4],
     buildDuration: cells[5] === NULL ? null : cells[5],
@@ -137,8 +148,8 @@ const LINK_NOTE =
 /**
  * Renders the failure comment
  */
-export const failed = ({ state }: CommentArgs): string => `
-${COMMENT_TAG}
+export const failed = ({ state, tag }: CommentArgs): string => `
+${COMMENT_TAG(tag)}
 There was an error building a deploy preview for the last commit. For more details, check the output of the action run [here](${
   state.latest.runLink
 }).
@@ -151,9 +162,9 @@ ${details(state)}
 /**
  * Renders the building successful comment
  */
-export const successful = ({ prId, url, state }: CommentArgs): string =>
+export const successful = ({ prId, url, state, tag }: CommentArgs): string =>
   `
-${COMMENT_TAG}
+  ${COMMENT_TAG(tag)}
 A deploy preview has been created for this Pull Request (#${prId}), which is available at ${url}.
 
 ${LINK_NOTE}
@@ -164,9 +175,9 @@ ${details(state)}
 /**
  * Renders the building in-progress comment
  */
-export const building = ({ prId, url, state }: CommentArgs): string =>
+export const building = ({ prId, url, state, tag }: CommentArgs): string =>
   `
-${COMMENT_TAG}
+${COMMENT_TAG(tag)}
 A deploy preview is being created for this Pull Request (#${prId}), which will be available at ${url} once completed.
 
 ${LINK_NOTE}
@@ -207,7 +218,7 @@ export const entry = ({
 }: BuildEntry): string =>
   `| ${emoji} | ${status} | ${
     deployUrl != null ? link("link", deployUrl) : NULL
-  } | [${commitSha}](${commitLink}) | ${buildTime} | ${
+  } | ${link(`\`${commitSha}\``, commitLink)} | ${buildTime} | ${
     buildDuration != null ? buildDuration : NULL
   } | ${link("link", runLink)} |
 `.trim();

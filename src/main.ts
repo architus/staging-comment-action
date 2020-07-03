@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/camelcase */
 import * as core from "@actions/core";
+import got from "got";
 import { GitHub, context } from "@actions/github";
 import {
   IssuesListCommentsForRepoResponseData,
@@ -57,11 +58,13 @@ interface ActionContext {
  * @param octokit - Current Octokit GitHub API binding instance
  * @param prId - PR ID for the current CI context
  * @param repo - GitHub repo for the current CI context
+ * @param tag - Optional action tag
  */
 async function getActionComment(
   octokit: GitHub,
   prId: number,
   repo: Repo,
+  tag?: string,
 ): Promise<Comment | Nil> {
   const { data: thisUser } = await octokit.users.getAuthenticated();
   const { data: comments } = await octokit.issues.listComments({
@@ -72,7 +75,7 @@ async function getActionComment(
     (comment) => comment.user.id === thisUser.id,
   );
   const specialComments = thisUserComments.filter((comment) =>
-    isStagingComment(comment.body),
+    isStagingComment(comment.body, tag),
   );
   if (specialComments.length >= 1) return specialComments[0];
   return null;
@@ -165,6 +168,8 @@ export async function run(mode: EventMode): Promise<void> {
   const buildTime: string = core.getInput("build-time");
   const buildDuration: string = core.getInput("build-duration");
   const jobName: string | Nil = core.getInput("job-name");
+  let tag: string | Nil = core.getInput("tag");
+  if (tag === "") tag = null;
 
   const parsedBuildDuration =
     buildDuration.trim().length > 0 ? parseInt(buildDuration.trim()) : null;
@@ -227,7 +232,7 @@ export async function run(mode: EventMode): Promise<void> {
     return;
   }
 
-  const comment = await getActionComment(octokit, prId, repo);
+  const comment = await getActionComment(octokit, prId, repo, tag ?? undefined);
   if (comment != null) {
     core.debug(
       `Found existing CI comment ${comment.id} by ${comment.user.login} on PR ${prId}`,
@@ -423,6 +428,21 @@ async function post(actionContext: ActionContext): Promise<void> {
     successful({ prId: prId.toString(), state, url }),
     actionContext,
   );
+
+  // On post, wait 2 minutes and verify that the commit link exists
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  const response = await got(commitUrl);
+  if (response.statusCode >= 400) {
+    // Update the comment to remove the commit deploy URL
+    const newState = updateState(
+      { ...current, deployUrl: null },
+      actionContext,
+    );
+    await patchComment(
+      successful({ prId: prId.toString(), state: newState, url }),
+      actionContext,
+    );
+  }
 }
 
 /**

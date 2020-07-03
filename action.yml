@@ -27,6 +27,9 @@ inputs:
   job-name:
     description: Name of the job this action is a part of, used for permalinking to runs
     required: false
+  tag:
+    description: Tag for the action to scope it to a single comment. Useful if multiple staging-comment-actions are run in a given PR
+    required: false
 
 outputs:
   runId:
