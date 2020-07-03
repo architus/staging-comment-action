@@ -38,7 +38,7 @@ export interface BuildEntry {
 export interface CommentArgs {
   prId: string;
   url: string;
-  tag?: string;
+  tag: string | Nil;
   state: BuildState;
 }
 
@@ -50,7 +50,8 @@ export interface BuildState {
   previous: BuildEntry[];
 }
 
-const COMMENT_TAG = (tag?: string): string =>
+type Nil = null | undefined;
+const COMMENT_TAG = (tag: string | Nil): string =>
   `<!-- ci/staging-comment-action${tag != null ? `-${tag}` : ""} -->`;
 const HEADER_ROW = "| | Status | Url | Commit | Started at | Duration | Job |";
 const SEPARATOR_ROW = "|-|-|-|-|-|-|-|";
@@ -61,7 +62,7 @@ const NULL = "~";
  * hidden HTML comment at the beginning (see `COMMENT_TAG`)
  * @param body - Comment body
  */
-export function isStagingComment(body: string, tag?: string): boolean {
+export function isStagingComment(body: string, tag: string | Nil): boolean {
   const trimmed = body.trim();
   return trimmed.startsWith(COMMENT_TAG(tag));
 }

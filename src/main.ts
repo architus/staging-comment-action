@@ -49,7 +49,7 @@ interface ActionContext {
   prId: number;
   sha: string;
   repo: Repo;
-  tag?: string;
+  tag: string | Nil;
 }
 
 /**
@@ -64,7 +64,7 @@ async function getActionComment(
   octokit: GitHub,
   prId: number,
   repo: Repo,
-  tag?: string,
+  tag: string | Nil,
 ): Promise<Comment | Nil> {
   const { data: thisUser } = await octokit.users.getAuthenticated();
   const { data: comments } = await octokit.issues.listComments({
@@ -243,6 +243,7 @@ export async function run(mode: EventMode): Promise<void> {
     octokit,
     repo,
     prId,
+    tag,
   };
 
   switch (mode) {
@@ -388,6 +389,7 @@ async function pre(actionContext: ActionContext): Promise<void> {
     buildTime,
     runLink,
     commitUrl,
+    tag,
   } = actionContext;
 
   const current: BuildEntry = {
@@ -404,7 +406,7 @@ async function pre(actionContext: ActionContext): Promise<void> {
   const comment = await getInitialComment(actionContext);
   const state = updateState(current, comment, actionContext);
   await patchComment(
-    building({ prId: prId.toString(), state, url }),
+    building({ prId: prId.toString(), state, url, tag }),
     comment,
     actionContext,
   );
@@ -444,7 +446,7 @@ async function post(actionContext: ActionContext): Promise<void> {
   let comment = await getInitialComment(actionContext);
   const state = updateState(current, comment, actionContext);
   await patchComment(
-    successful({ prId: prId.toString(), state, url }),
+    successful({ prId: prId.toString(), state, url, tag }),
     comment,
     actionContext,
   );
@@ -467,7 +469,7 @@ async function post(actionContext: ActionContext): Promise<void> {
       actionContext,
     );
     await patchComment(
-      successful({ prId: prId.toString(), state: newState, url }),
+      successful({ prId: prId.toString(), state: newState, url, tag }),
       comment,
       actionContext,
     );
@@ -481,7 +483,14 @@ async function post(actionContext: ActionContext): Promise<void> {
  * @param actionContext - Base action context
  */
 async function failure(actionContext: ActionContext): Promise<void> {
-  const { prId, stagingUrl: url, shortSha, buildTime, runLink } = actionContext;
+  const {
+    prId,
+    stagingUrl: url,
+    shortSha,
+    buildTime,
+    runLink,
+    tag,
+  } = actionContext;
 
   const current: BuildEntry = {
     emoji: BuildEmoji.Failure,
@@ -497,7 +506,7 @@ async function failure(actionContext: ActionContext): Promise<void> {
   const comment = await getInitialComment(actionContext);
   const state = updateState(current, comment, actionContext);
   await patchComment(
-    failed({ prId: prId.toString(), state, url }),
+    failed({ prId: prId.toString(), state, url, tag }),
     comment,
     actionContext,
   );

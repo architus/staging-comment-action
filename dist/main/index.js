@@ -4193,6 +4193,7 @@ function run(mode) {
             octokit,
             repo,
             prId,
+            tag,
         };
         switch (mode) {
             case "pre":
@@ -4312,7 +4313,7 @@ function getInitialComment(actionContext) {
  */
 function pre(actionContext) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { prId, stagingUrl: url, shortSha, buildTime, runLink, commitUrl, } = actionContext;
+        const { prId, stagingUrl: url, shortSha, buildTime, runLink, commitUrl, tag, } = actionContext;
         const current = {
             emoji: templates_1.BuildEmoji.InProgress,
             status: templates_1.BuildStatus.InProgress,
@@ -4325,7 +4326,7 @@ function pre(actionContext) {
         };
         const comment = yield getInitialComment(actionContext);
         const state = updateState(current, comment, actionContext);
-        yield patchComment(templates_1.building({ prId: prId.toString(), state, url }), comment, actionContext);
+        yield patchComment(templates_1.building({ prId: prId.toString(), state, url, tag }), comment, actionContext);
     });
 }
 /**
@@ -4349,7 +4350,7 @@ function post(actionContext) {
         };
         let comment = yield getInitialComment(actionContext);
         const state = updateState(current, comment, actionContext);
-        yield patchComment(templates_1.successful({ prId: prId.toString(), state, url }), comment, actionContext);
+        yield patchComment(templates_1.successful({ prId: prId.toString(), state, url, tag }), comment, actionContext);
         // On post, wait 2 minutes and verify that the commit link exists
         yield new Promise((resolve) => setTimeout(resolve, 2000));
         let isError = false;
@@ -4363,7 +4364,7 @@ function post(actionContext) {
             // Update the comment to remove the commit deploy URL
             comment = yield getActionComment(octokit, prId, repo, tag);
             const newState = updateState(Object.assign(Object.assign({}, current), { deployUrl: null }), comment, actionContext);
-            yield patchComment(templates_1.successful({ prId: prId.toString(), state: newState, url }), comment, actionContext);
+            yield patchComment(templates_1.successful({ prId: prId.toString(), state: newState, url, tag }), comment, actionContext);
         }
     });
 }
@@ -4375,7 +4376,7 @@ function post(actionContext) {
  */
 function failure(actionContext) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { prId, stagingUrl: url, shortSha, buildTime, runLink } = actionContext;
+        const { prId, stagingUrl: url, shortSha, buildTime, runLink, tag, } = actionContext;
         const current = {
             emoji: templates_1.BuildEmoji.Failure,
             status: templates_1.BuildStatus.Failure,
@@ -4388,7 +4389,7 @@ function failure(actionContext) {
         };
         const comment = yield getInitialComment(actionContext);
         const state = updateState(current, comment, actionContext);
-        yield patchComment(templates_1.failed({ prId: prId.toString(), state, url }), comment, actionContext);
+        yield patchComment(templates_1.failed({ prId: prId.toString(), state, url, tag }), comment, actionContext);
     });
 }
 
