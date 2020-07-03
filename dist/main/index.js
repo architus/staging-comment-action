@@ -4352,10 +4352,10 @@ function post(actionContext) {
         const state = updateState(current, comment, actionContext);
         yield patchComment(templates_1.successful({ prId: prId.toString(), state, url, tag }), comment, actionContext);
         // On post, wait 2 minutes and verify that the commit link exists
-        yield new Promise((resolve) => setTimeout(resolve, 2000));
+        yield new Promise((resolve) => setTimeout(resolve, 2000 * 60));
         let isError = false;
         try {
-            got_1.default(commitUrl);
+            yield got_1.default(commitUrl);
         }
         catch (err) {
             isError = true;

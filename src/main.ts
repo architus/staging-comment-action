@@ -452,10 +452,10 @@ async function post(actionContext: ActionContext): Promise<void> {
   );
 
   // On post, wait 2 minutes and verify that the commit link exists
-  await new Promise((resolve) => setTimeout(resolve, 2000));
+  await new Promise((resolve) => setTimeout(resolve, 2000 * 60));
   let isError = false;
   try {
-    got(commitUrl);
+    await got(commitUrl);
   } catch (err) {
     isError = true;
   }
