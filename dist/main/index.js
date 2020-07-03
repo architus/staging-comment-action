@@ -34857,6 +34857,7 @@ const LINK_NOTE = "Semi-permanent links to the built versions of each commit are
  */
 exports.failed = ({ state, tag }) => `
 ${COMMENT_TAG(tag)}
+### Deploy preview${tag == null ? ` (\`${tag}\`)` : ""}
 There was an error building a deploy preview for the last commit. For more details, check the output of the action run [here](${state.latest.runLink}).
 
 ${LINK_NOTE}
@@ -34867,7 +34868,8 @@ ${exports.details(state)}
  * Renders the building successful comment
  */
 exports.successful = ({ prId, url, state, tag }) => `
-  ${COMMENT_TAG(tag)}
+${COMMENT_TAG(tag)}
+### Deploy preview${tag == null ? ` (\`${tag}\`)` : ""}
 A deploy preview has been created for this Pull Request (#${prId}), which is available at ${url}.
 
 ${LINK_NOTE}
@@ -34879,6 +34881,7 @@ ${exports.details(state)}
  */
 exports.building = ({ prId, url, state, tag }) => `
 ${COMMENT_TAG(tag)}
+### Deploy preview${tag == null ? ` (\`${tag}\`)` : ""}
 A deploy preview is being created for this Pull Request (#${prId}), which will be available at ${url} once completed.
 
 ${LINK_NOTE}

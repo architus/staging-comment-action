@@ -143,6 +143,7 @@ const LINK_NOTE =
  */
 export const failed = ({ state, tag }: CommentArgs): string => `
 ${COMMENT_TAG(tag)}
+### Deploy preview${tag == null ? ` (\`${tag}\`)` : ""}
 There was an error building a deploy preview for the last commit. For more details, check the output of the action run [here](${
   state.latest.runLink
 }).
@@ -157,7 +158,8 @@ ${details(state)}
  */
 export const successful = ({ prId, url, state, tag }: CommentArgs): string =>
   `
-  ${COMMENT_TAG(tag)}
+${COMMENT_TAG(tag)}
+### Deploy preview${tag == null ? ` (\`${tag}\`)` : ""}
 A deploy preview has been created for this Pull Request (#${prId}), which is available at ${url}.
 
 ${LINK_NOTE}
@@ -171,6 +173,7 @@ ${details(state)}
 export const building = ({ prId, url, state, tag }: CommentArgs): string =>
   `
 ${COMMENT_TAG(tag)}
+### Deploy preview${tag == null ? ` (\`${tag}\`)` : ""}
 A deploy preview is being created for this Pull Request (#${prId}), which will be available at ${url} once completed.
 
 ${LINK_NOTE}
