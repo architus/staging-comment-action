@@ -40,7 +40,6 @@ interface Repo {
  */
 interface ActionContext {
   buildDuration: number | Nil;
-  comment: Comment | Nil;
   stagingUrl: string;
   commitUrl: string;
   shortSha: string;
@@ -50,6 +49,7 @@ interface ActionContext {
   prId: number;
   sha: string;
   repo: Repo;
+  tag?: string;
 }
 
 /**
@@ -232,15 +232,6 @@ export async function run(mode: EventMode): Promise<void> {
     return;
   }
 
-  const comment = await getActionComment(octokit, prId, repo, tag ?? undefined);
-  if (comment != null) {
-    core.debug(
-      `Found existing CI comment ${comment.id} by ${comment.user.login} on PR ${prId}`,
-    );
-  } else {
-    core.debug(`Found no existing CI comment on PR ${prId}`);
-  }
-
   const actionContext: ActionContext = {
     runLink: job?.html_url ?? buildRunLink(repo, runId),
     buildTime: new Date(Date.parse(buildTime)),
@@ -249,7 +240,6 @@ export async function run(mode: EventMode): Promise<void> {
     commitUrl,
     shortSha,
     sha,
-    comment,
     octokit,
     repo,
     prId,
@@ -272,13 +262,15 @@ export async function run(mode: EventMode): Promise<void> {
  * Updates the existing comment in the context if it exists with the given body, or
  * creates a new comment if it doesn't exist
  * @param newBody - New comment body to use
+ * @param comment - Action comment
  * @param actionContext - Base action context
  */
 async function patchComment(
   newBody: string,
+  comment: Comment | Nil,
   actionContext: ActionContext,
 ): Promise<void> {
-  const { octokit, comment, prId, repo } = actionContext;
+  const { octokit, prId, repo } = actionContext;
   if (comment != null) {
     await octokit.issues.updateComment({
       ...repo,
@@ -300,13 +292,15 @@ async function patchComment(
  * a matching entry in the comment, it updates the entry. Otherwise, adds a new entry as
  * the latest one (pushing all other entries down if they exist).
  * @param current - Current build entry (might not be latest)
+ * @param comment - Action comment
  * @param actionContext - Base action context
  */
 function updateState(
   current: BuildEntry,
+  comment: Comment | Nil,
   actionContext: ActionContext,
 ): BuildState {
-  const { comment, shortSha } = actionContext;
+  const { shortSha } = actionContext;
   let state: BuildState;
   if (comment != null) {
     state = getBuildState(comment.body);
@@ -363,6 +357,25 @@ function buildCommitLink(actionContext: ActionContext): string {
 }
 
 /**
+ * Gets the initial comment state, printing a message to the console if it exists
+ * @param actionContext - Base action context
+ */
+async function getInitialComment(
+  actionContext: ActionContext,
+): Promise<Comment | Nil> {
+  const { prId, repo, tag, octokit } = actionContext;
+  const comment = await getActionComment(octokit, prId, repo, tag);
+  if (comment != null) {
+    core.debug(
+      `Found existing CI comment ${comment.id} by ${comment.user.login} on PR ${prId}`,
+    );
+  } else {
+    core.debug(`Found no existing CI comment on PR ${prId}`);
+  }
+  return comment;
+}
+
+/**
  * Executes the primary action logic before a build, updating the newest build entry and
  * pushing all previous build entries to the bottom section if they exist.
  * @param actionContext - Base action context
@@ -388,9 +401,11 @@ async function pre(actionContext: ActionContext): Promise<void> {
     runLink,
   };
 
-  const state = updateState(current, actionContext);
+  const comment = await getInitialComment(actionContext);
+  const state = updateState(current, comment, actionContext);
   await patchComment(
     building({ prId: prId.toString(), state, url }),
+    comment,
     actionContext,
   );
 }
@@ -410,6 +425,9 @@ async function post(actionContext: ActionContext): Promise<void> {
     buildDuration,
     runLink,
     commitUrl,
+    octokit,
+    repo,
+    tag,
   } = actionContext;
 
   const current: BuildEntry = {
@@ -423,23 +441,34 @@ async function post(actionContext: ActionContext): Promise<void> {
     runLink,
   };
 
-  const state = updateState(current, actionContext);
+  let comment = await getInitialComment(actionContext);
+  const state = updateState(current, comment, actionContext);
   await patchComment(
     successful({ prId: prId.toString(), state, url }),
+    comment,
     actionContext,
   );
 
   // On post, wait 2 minutes and verify that the commit link exists
   await new Promise((resolve) => setTimeout(resolve, 2000));
-  const response = await got(commitUrl);
-  if (response.statusCode >= 400) {
+  let isError = false;
+  try {
+    got(commitUrl);
+  } catch (err) {
+    isError = true;
+  }
+
+  if (isError) {
     // Update the comment to remove the commit deploy URL
+    comment = await getActionComment(octokit, prId, repo, tag);
     const newState = updateState(
       { ...current, deployUrl: null },
+      comment,
       actionContext,
     );
     await patchComment(
       successful({ prId: prId.toString(), state: newState, url }),
+      comment,
       actionContext,
     );
   }
@@ -465,9 +494,11 @@ async function failure(actionContext: ActionContext): Promise<void> {
     runLink,
   };
 
-  const state = updateState(current, actionContext);
+  const comment = await getInitialComment(actionContext);
+  const state = updateState(current, comment, actionContext);
   await patchComment(
     failed({ prId: prId.toString(), state, url }),
+    comment,
     actionContext,
   );
 }

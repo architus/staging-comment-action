@@ -4182,13 +4182,6 @@ function run(mode) {
             core.info("Not a PR; setting outputs and returning early");
             return;
         }
-        const comment = yield getActionComment(octokit, prId, repo, tag !== null && tag !== void 0 ? tag : undefined);
-        if (comment != null) {
-            core.debug(`Found existing CI comment ${comment.id} by ${comment.user.login} on PR ${prId}`);
-        }
-        else {
-            core.debug(`Found no existing CI comment on PR ${prId}`);
-        }
         const actionContext = {
             runLink: (_b = job === null || job === void 0 ? void 0 : job.html_url) !== null && _b !== void 0 ? _b : buildRunLink(repo, runId),
             buildTime: new Date(Date.parse(buildTime)),
@@ -4197,7 +4190,6 @@ function run(mode) {
             commitUrl,
             shortSha,
             sha,
-            comment,
             octokit,
             repo,
             prId,
@@ -4220,11 +4212,12 @@ exports.run = run;
  * Updates the existing comment in the context if it exists with the given body, or
  * creates a new comment if it doesn't exist
  * @param newBody - New comment body to use
+ * @param comment - Action comment
  * @param actionContext - Base action context
  */
-function patchComment(newBody, actionContext) {
+function patchComment(newBody, comment, actionContext) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { octokit, comment, prId, repo } = actionContext;
+        const { octokit, prId, repo } = actionContext;
         if (comment != null) {
             yield octokit.issues.updateComment(Object.assign(Object.assign({}, repo), { body: newBody, comment_id: comment.id }));
         }
@@ -4239,10 +4232,11 @@ function patchComment(newBody, actionContext) {
  * a matching entry in the comment, it updates the entry. Otherwise, adds a new entry as
  * the latest one (pushing all other entries down if they exist).
  * @param current - Current build entry (might not be latest)
+ * @param comment - Action comment
  * @param actionContext - Base action context
  */
-function updateState(current, actionContext) {
-    const { comment, shortSha } = actionContext;
+function updateState(current, comment, actionContext) {
+    const { shortSha } = actionContext;
     let state;
     if (comment != null) {
         state = templates_1.getBuildState(comment.body);
@@ -4295,6 +4289,23 @@ function buildCommitLink(actionContext) {
     return `https://github.com/${repo.owner}/${repo.repo}/commit/${sha}`;
 }
 /**
+ * Gets the initial comment state, printing a message to the console if it exists
+ * @param actionContext - Base action context
+ */
+function getInitialComment(actionContext) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const { prId, repo, tag, octokit } = actionContext;
+        const comment = yield getActionComment(octokit, prId, repo, tag);
+        if (comment != null) {
+            core.debug(`Found existing CI comment ${comment.id} by ${comment.user.login} on PR ${prId}`);
+        }
+        else {
+            core.debug(`Found no existing CI comment on PR ${prId}`);
+        }
+        return comment;
+    });
+}
+/**
  * Executes the primary action logic before a build, updating the newest build entry and
  * pushing all previous build entries to the bottom section if they exist.
  * @param actionContext - Base action context
@@ -4312,8 +4323,9 @@ function pre(actionContext) {
             buildDuration: null,
             runLink,
         };
-        const state = updateState(current, actionContext);
-        yield patchComment(templates_1.building({ prId: prId.toString(), state, url }), actionContext);
+        const comment = yield getInitialComment(actionContext);
+        const state = updateState(current, comment, actionContext);
+        yield patchComment(templates_1.building({ prId: prId.toString(), state, url }), comment, actionContext);
     });
 }
 /**
@@ -4324,7 +4336,7 @@ function pre(actionContext) {
  */
 function post(actionContext) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { prId, stagingUrl: url, shortSha, buildTime, buildDuration, runLink, commitUrl, } = actionContext;
+        const { prId, stagingUrl: url, shortSha, buildTime, buildDuration, runLink, commitUrl, octokit, repo, tag, } = actionContext;
         const current = {
             emoji: templates_1.BuildEmoji.Success,
             status: templates_1.BuildStatus.Success,
@@ -4335,15 +4347,23 @@ function post(actionContext) {
             buildDuration: buildDuration != null ? templates_1.duration(buildDuration) : null,
             runLink,
         };
-        const state = updateState(current, actionContext);
-        yield patchComment(templates_1.successful({ prId: prId.toString(), state, url }), actionContext);
+        let comment = yield getInitialComment(actionContext);
+        const state = updateState(current, comment, actionContext);
+        yield patchComment(templates_1.successful({ prId: prId.toString(), state, url }), comment, actionContext);
         // On post, wait 2 minutes and verify that the commit link exists
         yield new Promise((resolve) => setTimeout(resolve, 2000));
-        const response = yield got_1.default(commitUrl);
-        if (response.statusCode >= 400) {
+        let isError = false;
+        try {
+            got_1.default(commitUrl);
+        }
+        catch (err) {
+            isError = true;
+        }
+        if (isError) {
             // Update the comment to remove the commit deploy URL
-            const newState = updateState(Object.assign(Object.assign({}, current), { deployUrl: null }), actionContext);
-            yield patchComment(templates_1.successful({ prId: prId.toString(), state: newState, url }), actionContext);
+            comment = yield getActionComment(octokit, prId, repo, tag);
+            const newState = updateState(Object.assign(Object.assign({}, current), { deployUrl: null }), comment, actionContext);
+            yield patchComment(templates_1.successful({ prId: prId.toString(), state: newState, url }), comment, actionContext);
         }
     });
 }
@@ -4366,8 +4386,9 @@ function failure(actionContext) {
             buildDuration: null,
             runLink,
         };
-        const state = updateState(current, actionContext);
-        yield patchComment(templates_1.failed({ prId: prId.toString(), state, url }), actionContext);
+        const comment = yield getInitialComment(actionContext);
+        const state = updateState(current, comment, actionContext);
+        yield patchComment(templates_1.failed({ prId: prId.toString(), state, url }), comment, actionContext);
     });
 }
 
@@ -34756,7 +34777,6 @@ var BuildEmoji;
     BuildEmoji["Failure"] = "\uD83D\uDD34";
 })(BuildEmoji = exports.BuildEmoji || (exports.BuildEmoji = {}));
 const COMMENT_TAG = (tag) => `<!-- ci/staging-comment-action${tag != null ? `-${tag}` : ""} -->`;
-const COMMENT_TAG_START = "<!-- ci/staging-comment-action";
 const HEADER_ROW = "| | Status | Url | Commit | Started at | Duration | Job |";
 const SEPARATOR_ROW = "|-|-|-|-|-|-|-|";
 const NULL = "~";
@@ -34767,12 +34787,7 @@ const NULL = "~";
  */
 function isStagingComment(body, tag) {
     const trimmed = body.trim();
-    if (!trimmed.startsWith(COMMENT_TAG_START))
-        return false;
-    const parsedTag = trimmed.substring(COMMENT_TAG_START.length, trimmed.indexOf(" -->"));
-    if (tag == null)
-        return parsedTag === "";
-    return parsedTag === `-${tag}`;
+    return trimmed.startsWith(COMMENT_TAG(tag));
 }
 exports.isStagingComment = isStagingComment;
 const BUILD_ENTRY_REGEX = /^\|.*\|\s*$/;
@@ -34889,7 +34904,7 @@ ${previous(state.previous)}
 /**
  * Renders a single build entry to Markdown
  */
-exports.entry = ({ emoji, status, deployUrl, commitSha, commitLink, buildTime, buildDuration, runLink, }) => `| ${emoji} | ${status} | ${deployUrl != null ? link("link", deployUrl) : NULL} | ${link(`\`${commitSha}\``, commitLink)} | ${buildTime} | ${buildDuration != null ? buildDuration : NULL} | ${link("link", runLink)} |
+exports.entry = ({ emoji, status, deployUrl, commitSha, commitLink, buildTime, buildDuration, runLink, }) => `| ${emoji} | ${status} | ${deployUrl != null ? link("link", deployUrl) : NULL} | ${link(`\`${commitSha.replace("`", "")}\``, commitLink)} | ${buildTime} | ${buildDuration != null ? buildDuration : NULL} | ${link("link", runLink)} |
 `.trim();
 /**
  * Renders a duration to a `4m 2s` format

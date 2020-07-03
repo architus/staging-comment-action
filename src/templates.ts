@@ -52,7 +52,6 @@ export interface BuildState {
 
 const COMMENT_TAG = (tag?: string): string =>
   `<!-- ci/staging-comment-action${tag != null ? `-${tag}` : ""} -->`;
-const COMMENT_TAG_START = "<!-- ci/staging-comment-action";
 const HEADER_ROW = "| | Status | Url | Commit | Started at | Duration | Job |";
 const SEPARATOR_ROW = "|-|-|-|-|-|-|-|";
 const NULL = "~";
@@ -64,14 +63,7 @@ const NULL = "~";
  */
 export function isStagingComment(body: string, tag?: string): boolean {
   const trimmed = body.trim();
-  if (!trimmed.startsWith(COMMENT_TAG_START)) return false;
-  const parsedTag = trimmed.substring(
-    COMMENT_TAG_START.length,
-    trimmed.indexOf(" -->"),
-  );
-
-  if (tag == null) return parsedTag === "";
-  return parsedTag === `-${tag}`;
+  return trimmed.startsWith(COMMENT_TAG(tag));
 }
 
 const BUILD_ENTRY_REGEX = /^\|.*\|\s*$/;
@@ -218,9 +210,13 @@ export const entry = ({
 }: BuildEntry): string =>
   `| ${emoji} | ${status} | ${
     deployUrl != null ? link("link", deployUrl) : NULL
-  } | ${link(`\`${commitSha}\``, commitLink)} | ${buildTime} | ${
-    buildDuration != null ? buildDuration : NULL
-  } | ${link("link", runLink)} |
+  } | ${link(
+    `\`${commitSha.replace("`", "")}\``,
+    commitLink,
+  )} | ${buildTime} | ${buildDuration != null ? buildDuration : NULL} | ${link(
+    "link",
+    runLink,
+  )} |
 `.trim();
 
 /**
