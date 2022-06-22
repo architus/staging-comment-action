@@ -30,7 +30,7 @@
     "@octokit/rest": "^17.9.2",
     "@types/got": "^9.6.11",
     "@types/luxon": "^1.24.0",
-    "got": "^11.3.0",
+    "got": "^11.8.5",
     "luxon": "^1.24.1"
   },
   "devDependencies": {
